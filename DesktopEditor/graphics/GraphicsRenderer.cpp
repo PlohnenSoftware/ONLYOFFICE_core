@@ -37,6 +37,7 @@
 
 #ifndef GRAPHICS_DISABLE_METAFILE
 #include "../raster/Metafile/MetaFile.h"
+#include "../raster/ImageFileFormatChecker.h"
 #endif
 
 #if 0
@@ -1184,14 +1185,26 @@ HRESULT CGraphicsRenderer::DrawImage(IGrObject* pImage, const double& x, const d
 }
 HRESULT CGraphicsRenderer::DrawImageFromFile(const std::wstring& bstrVal, const double& x, const double& y, const double& w, const double& h, const BYTE& lAlpha)
 {
-#if 0
-    MetaFile::CMetaFile oMetafile(m_pFontManager ? m_pFontManager->m_pApplication : NULL);
-    if (oMetafile.LoadFromFile(bstrVal.c_str()))
+#ifndef GRAPHICS_DISABLE_METAFILE
+    // Render SVG/WMF/EMF/SVM as vectors instead of going through CCacheImage,
+    // which rasterizes via ConvertToRasterMaxSize and loses resolution
+    // independence in the final output (e.g. PDF export, print).
+    CImageFileFormatChecker oImageFormatCheck(bstrVal);
+    if (_CXIMAGE_FORMAT_WMF == oImageFormatCheck.eFileType ||
+        _CXIMAGE_FORMAT_EMF == oImageFormatCheck.eFileType ||
+        _CXIMAGE_FORMAT_SVM == oImageFormatCheck.eFileType ||
+        _CXIMAGE_FORMAT_SVG == oImageFormatCheck.eFileType)
     {
-        this->Save();
-        bool bRet = oMetafile.DrawOnRenderer(this, x, y, w, h);
-        this->Restore();
-        return bRet ? S_OK : S_FALSE;
+        MetaFile::CMetaFile oMetafile(m_pFontManager ? m_pFontManager->GetApplication() : NULL);
+        if (oMetafile.LoadFromFile(bstrVal.c_str()))
+        {
+            this->Save();
+            bool bRet = oMetafile.DrawOnRenderer(this, x, y, w, h);
+            this->Restore();
+            if (bRet)
+                return S_OK;
+            // If DrawOnRenderer failed, fall through to raster fallback
+        }
     }
 #endif
 
