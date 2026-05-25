@@ -1141,6 +1141,32 @@ HRESULT CPdfWriter::DrawImageFromFile(NSFonts::IApplicationFonts* pAppFonts, con
 	std::wstring sTempImagePath = GetDownloadFile(wsImagePathSrc, wsTempDirectory);
 	std::wstring wsImagePath = sTempImagePath.empty() ? wsImagePathSrc : sTempImagePath;
 
+	// Emit SVG/WMF/EMF/SVM as PDF vector paths rather than rasterizing to PNG.
+	// Routes back through the IRenderer (CPdfFile->CPdfWriter), so the metafile's
+	// shapes become real PDF path operators. Gated on full opacity because alpha
+	// would require wrapping the replayed commands in an opacity group.
+	if (m_pRenderer && 255 == nAlpha && wsImagePath.find(L"data:") != 0)
+	{
+		CImageFileFormatChecker oImageFormatCheck(wsImagePath);
+		if (_CXIMAGE_FORMAT_WMF == oImageFormatCheck.eFileType ||
+			_CXIMAGE_FORMAT_EMF == oImageFormatCheck.eFileType ||
+			_CXIMAGE_FORMAT_SVM == oImageFormatCheck.eFileType ||
+			_CXIMAGE_FORMAT_SVG == oImageFormatCheck.eFileType)
+		{
+			MetaFile::IMetaFile* pMeta = MetaFile::Create(pAppFonts);
+			if (pMeta && pMeta->LoadFromFile(wsImagePath.c_str()))
+			{
+				pMeta->DrawOnRenderer(m_pRenderer, dX, dY, dW, dH);
+				RELEASEOBJECT(pMeta);
+
+				if (NSFile::CFileBinary::Exists(sTempImagePath))
+					NSFile::CFileBinary::Remove(sTempImagePath);
+				return S_OK;
+			}
+			RELEASEOBJECT(pMeta);
+		}
+	}
+
 	Aggplus::CImage* pAggImage = ConvertMetafile(pAppFonts, wsImagePath, GetTempFile(wsTempDirectory), MM_TO_PT(dW), MM_TO_PT(dH));
 
 	HRESULT hRes = S_OK;
