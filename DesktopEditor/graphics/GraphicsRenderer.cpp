@@ -34,6 +34,7 @@
  */
 #include "GraphicsRenderer.h"
 #include <algorithm>
+#include <fstream>
 
 #ifndef GRAPHICS_DISABLE_METAFILE
 #include "../raster/Metafile/MetaFile.h"
@@ -1185,6 +1186,7 @@ HRESULT CGraphicsRenderer::DrawImage(IGrObject* pImage, const double& x, const d
 }
 HRESULT CGraphicsRenderer::DrawImageFromFile(const std::wstring& bstrVal, const double& x, const double& y, const double& w, const double& h, const BYTE& lAlpha)
 {
+    { std::wofstream l("/tmp/svg-debug.log", std::ios::app); l << L"[SVG-DEBUG] CGraphicsRenderer::DrawImageFromFile path=" << bstrVal << std::endl; }
 #ifndef GRAPHICS_DISABLE_METAFILE
     // Render SVG/WMF/EMF/SVM as vectors instead of going through CCacheImage,
     // which rasterizes via ConvertToRasterMaxSize and loses resolution

@@ -39,6 +39,7 @@
 
 #include <string>
 #include <iostream>
+#include <fstream>
 #include <cmath>
 
 #ifndef M_PI
@@ -349,6 +350,7 @@ namespace NSGraphics
 	}
 	void CGraphics::drawImage(const std::wstring& img, double x, double y, double w, double h, BYTE alpha)
 	{
+		{ std::wofstream l("/tmp/svg-debug.log", std::ios::app); l << L"[SVG-DEBUG] CGraphics::drawImage img=" << img << L" alpha=" << (int)alpha << std::endl; }
 		std::wstring strImage = img;
 		if (!NSFile::CFileBinary::Exists(img))
 			strImage = (0 == img.find(L"theme") ? m_pAppImage->GetThemesDirectory() : m_pAppImage->GetImagesDirectory()) + L'/' + img;

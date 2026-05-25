@@ -38,6 +38,7 @@
 #include "Image.h"
 #include "TemporaryCS.h"
 #include <map>
+#include <fstream>
 #include "../common/File.h"
 
 #ifndef GRAPHICS_DISABLE_METAFILE
@@ -62,6 +63,7 @@ public:
 
 	CCacheImage(NSFonts::IApplicationFonts* pFonts, const std::wstring& strFile) : NSImages::ICacheImage()
 	{
+		{ std::wofstream l("/tmp/svg-debug.log", std::ios::app); l << L"[SVG-DEBUG] CCacheImage::CCacheImage path=" << strFile << L" pFonts=" << (void*)pFonts << std::endl; }
 		if (NULL == pFonts)
 		{
 			m_oImage.Create(strFile);
@@ -73,6 +75,7 @@ public:
 #else
 			MetaFile::IMetaFile* pMetafile = MetaFile::Create(pFonts);
 			bool bIsMetafile = pMetafile->LoadFromFile(strFile.c_str());
+			{ std::wofstream l("/tmp/svg-debug.log", std::ios::app); l << L"[SVG-DEBUG] CCacheImage::CCacheImage bIsMetafile=" << bIsMetafile << std::endl; }
 			if (!bIsMetafile)
 			{
 				m_oImage.Create(strFile);
@@ -81,6 +84,7 @@ public:
 			{
 				std::wstring sTempFile = NSFile::CFileBinary::CreateTempFileWithUniqueName(NSFile::CFileBinary::GetTempPath(), L"AscMetafile_");
 
+				{ std::wofstream l("/tmp/svg-debug.log", std::ios::app); l << L"[SVG-DEBUG] CCacheImage RASTERIZING metafile to " << sTempFile << std::endl; }
 				//pMetafile->ConvertToRaster(sTempFile.c_str(), 4, 1000, -1);
 				MetaFile::ConvertToRasterMaxSize(pMetafile, sTempFile.c_str(), 4, 1000);
 

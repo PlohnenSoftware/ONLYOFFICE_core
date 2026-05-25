@@ -35,6 +35,7 @@
 #pragma once
 
 #include "agg_math.h"
+#include <fstream>
 #include "./MetafileToRenderer.h"
 #include "../fontengine/FontManager.h"
 #include "../raster/BgraFrame.h"
@@ -803,6 +804,8 @@ namespace NSOnlineOfficeBinToPdf
 				double m2 = oReader.ReadDouble();
 				double m3 = oReader.ReadDouble();
 				double m4 = oReader.ReadDouble();
+
+				{ std::wofstream l("/tmp/svg-debug.log", std::ios::app); l << L"[SVG-DEBUG] ctDrawImageFromFile sTempPath=" << sTempPath << L" sImagePath=" << sImagePath << std::endl; }
 
 				try
 				{

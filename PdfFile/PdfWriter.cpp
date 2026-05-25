@@ -34,6 +34,16 @@
  */
 #include "../DesktopEditor/common/File.h"
 #include "../DesktopEditor/common/Directory.h"
+#include <iostream>
+#include <fstream>
+
+// File-based logger that survives subprocess boundaries (DesktopEditors -> x2t -> doctrenderer).
+// Wide-string overloads write the same line as stderr would have.
+static std::wofstream& SVG_DEBUG_LOG()
+{
+	static std::wofstream s_log("/tmp/svg-debug.log", std::ios::app);
+	return s_log;
+}
 
 #include "PdfWriter.h"
 
@@ -104,6 +114,7 @@ static const long c_BrushTypeRadialGradient = 8002;
 
 Aggplus::CImage* ConvertMetafile(NSFonts::IApplicationFonts* pAppFonts, const std::wstring& wsPath, const std::wstring& wsTempDirectory, double dWidth = -1, double dHeight = -1)
 {
+	SVG_DEBUG_LOG() << L"[SVG-DEBUG] ConvertMetafile path=" << wsPath << std::endl;
 	if (wsPath.find(L"data:") == 0)
 	{
 		std::wstring::size_type posZ = wsPath.find(L',');
@@ -1111,6 +1122,7 @@ HRESULT CPdfWriter::PathCommandTextEx(const std::wstring& wsUnicodeText, const u
 //----------------------------------------------------------------------------------------
 HRESULT CPdfWriter::DrawImage(IGrObject* pImage, const double& dX, const double& dY, const double& dW, const double& dH)
 {
+	SVG_DEBUG_LOG() << L"[SVG-DEBUG] CPdfWriter::DrawImage (IGrObject) pImage=" << (void*)pImage << std::endl;
 	m_oCommandManager.Flush();
 
 	if (!IsPageValid() || !pImage || SkipRedact(dX, dY, dW, dH))
@@ -1125,11 +1137,14 @@ HRESULT CPdfWriter::DrawImageFromFile(NSFonts::IApplicationFonts* pAppFonts, con
 {
 	m_oCommandManager.Flush();
 
+	SVG_DEBUG_LOG() << L"[SVG-DEBUG] CPdfWriter::DrawImageFromFile path=" << wsImagePathSrc << L" alpha=" << (int)nAlpha << std::endl;
+
 	if (!IsPageValid() || SkipRedact(dX, dY, dW, dH))
 		return S_OK;
 
 	if (m_pDocument->HasImage(wsImagePathSrc, nAlpha))
 	{
+		SVG_DEBUG_LOG() << L"[SVG-DEBUG] cache hit, drawing cached PdfImage (likely rasterized)" << std::endl;
 		PdfWriter::CImageDict* pPdfImage = m_pDocument->GetImage(wsImagePathSrc, nAlpha);
 		m_pPage->GrSave();
 		UpdateTransform();
@@ -1148,14 +1163,17 @@ HRESULT CPdfWriter::DrawImageFromFile(NSFonts::IApplicationFonts* pAppFonts, con
 	if (m_pRenderer && 255 == nAlpha && wsImagePath.find(L"data:") != 0)
 	{
 		CImageFileFormatChecker oImageFormatCheck(wsImagePath);
+		SVG_DEBUG_LOG() << L"[SVG-DEBUG] format check eFileType=" << oImageFormatCheck.eFileType << L" resolved=" << wsImagePath << std::endl;
 		if (_CXIMAGE_FORMAT_WMF == oImageFormatCheck.eFileType ||
 			_CXIMAGE_FORMAT_EMF == oImageFormatCheck.eFileType ||
 			_CXIMAGE_FORMAT_SVM == oImageFormatCheck.eFileType ||
 			_CXIMAGE_FORMAT_SVG == oImageFormatCheck.eFileType)
 		{
+			SVG_DEBUG_LOG() << L"[SVG-DEBUG] detected metafile, attempting vector render" << std::endl;
 			MetaFile::IMetaFile* pMeta = MetaFile::Create(pAppFonts);
 			if (pMeta && pMeta->LoadFromFile(wsImagePath.c_str()))
 			{
+				SVG_DEBUG_LOG() << L"[SVG-DEBUG] vector render via DrawOnRenderer" << std::endl;
 				pMeta->DrawOnRenderer(m_pRenderer, dX, dY, dW, dH);
 				RELEASEOBJECT(pMeta);
 
@@ -1163,8 +1181,13 @@ HRESULT CPdfWriter::DrawImageFromFile(NSFonts::IApplicationFonts* pAppFonts, con
 					NSFile::CFileBinary::Remove(sTempImagePath);
 				return S_OK;
 			}
+			SVG_DEBUG_LOG() << L"[SVG-DEBUG] LoadFromFile failed, falling through to raster" << std::endl;
 			RELEASEOBJECT(pMeta);
 		}
+	}
+	else
+	{
+		SVG_DEBUG_LOG() << L"[SVG-DEBUG] vector path gate failed pRenderer=" << (void*)m_pRenderer << L" alpha=" << (int)nAlpha << std::endl;
 	}
 
 	Aggplus::CImage* pAggImage = ConvertMetafile(pAppFonts, wsImagePath, GetTempFile(wsTempDirectory), MM_TO_PT(dW), MM_TO_PT(dH));
@@ -3479,6 +3502,7 @@ PdfWriter::CImageDict* CPdfWriter::LoadImage(Aggplus::CImage* pImage, BYTE nAlph
 }
 PdfWriter::CImageDict* CPdfWriter::DrawImage(Aggplus::CImage* pImage, const double& dX, const double& dY, const double& dW, const double& dH, const BYTE& nAlpha)
 {
+	SVG_DEBUG_LOG() << L"[SVG-DEBUG] CPdfWriter::DrawImage (Aggplus::CImage) pImage=" << (void*)pImage << L" w=" << (pImage ? pImage->GetWidth() : 0) << L" h=" << (pImage ? pImage->GetHeight() : 0) << std::endl;
 	PdfWriter::CImageDict* pPdfImage = LoadImage(pImage, nAlpha);
 	if (!pPdfImage)
 		return NULL;
@@ -3487,7 +3511,7 @@ PdfWriter::CImageDict* CPdfWriter::DrawImage(Aggplus::CImage* pImage, const doub
 	UpdateTransform();
 	m_pPage->DrawImage(pPdfImage, MM_2_PT(dX), MM_2_PT(m_dPageHeight - dY - dH), MM_2_PT(dW), MM_2_PT(dH));
 	m_pPage->GrRestore();
-	
+
 	return pPdfImage;
 }
 bool CPdfWriter::DrawText(unsigned char* pCodes, const unsigned int& unLen, const double& dX, const double& dY, const std::string& sPUA)
