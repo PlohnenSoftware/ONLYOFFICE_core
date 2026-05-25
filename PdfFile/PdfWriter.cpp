@@ -516,6 +516,7 @@ HRESULT CPdfWriter::get_BrushTexturePath(std::wstring* wsPath)
 }
 HRESULT CPdfWriter::put_BrushTexturePath(const std::wstring& wsPath)
 {
+	SVG_DEBUG_LOG() << L"[SVG-DEBUG] CPdfWriter::put_BrushTexturePath path=" << wsPath << std::endl;
 	m_oBrush.SetTexturePath(wsPath);
 	return S_OK;
 }
@@ -3973,6 +3974,7 @@ void CPdfWriter::UpdateBrush(NSFonts::IApplicationFonts* pAppFonts, const std::w
 				 _CXIMAGE_FORMAT_SVM == oImageFormat.eFileType ||
 				 _CXIMAGE_FORMAT_SVG == oImageFormat.eFileType)
 		{
+			SVG_DEBUG_LOG() << L"[SVG-DEBUG] CPdfWriter::UpdateBrush metafile-brush RASTERIZING texture=" << wsTexturePath << std::endl;
 			// TODO: Implement proper metafile rendering
 			MetaFile::IMetaFile* pMeta = MetaFile::Create(pAppFonts);
 			pMeta->LoadFromFile(wsTexturePath.c_str());
