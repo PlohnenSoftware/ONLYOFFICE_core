@@ -36,6 +36,7 @@
 #include "PdfWriter.h"
 #include "PdfReader.h"
 #include "PdfEditor.h"
+#include <fstream>
 
 #include "../DesktopEditor/common/File.h"
 #include "../DesktopEditor/graphics/commands/DocInfo.h"
@@ -618,11 +619,13 @@ BYTE* CPdfFile::GetAPAnnots(int nRasterW, int nRasterH, int nBackgroundColor, in
 
 void CPdfFile::CreatePdf(bool isPDFA)
 {
+	{ std::wofstream l("/tmp/svg-debug.log", std::ios::app); l << L"[SVG-DEBUG] CPdfFile::CreatePdf isPDFA=" << isPDFA << std::endl; }
 	RELEASEOBJECT(m_pInternal->pWriter);
 	m_pInternal->pWriter = new CPdfWriter(m_pInternal->pAppFonts, isPDFA, this, true, m_pInternal->wsTempFolder);
 }
 int CPdfFile::SaveToFile(const std::wstring& wsPath)
 {
+	{ std::wofstream l("/tmp/svg-debug.log", std::ios::app); l << L"[SVG-DEBUG] CPdfFile::SaveToFile dst=" << wsPath << std::endl; }
 	if (!m_pInternal->pWriter)
 		return 1;
 	return m_pInternal->pWriter->SaveToFile(wsPath);
@@ -644,12 +647,14 @@ void CPdfFile::AddMetaData(const std::wstring& sMetaName, BYTE* pMetaData, DWORD
 }
 HRESULT CPdfFile::OnlineWordToPdf(const std::wstring& wsSrcFile, const std::wstring& wsDstFile, CConvertFromBinParams* pParams)
 {
+	{ std::wofstream l("/tmp/svg-debug.log", std::ios::app); l << L"[SVG-DEBUG] CPdfFile::OnlineWordToPdf src=" << wsSrcFile << L" dst=" << wsDstFile << std::endl; }
 	if (!m_pInternal->pWriter || !NSOnlineOfficeBinToPdf::ConvertBinToPdf(this, wsSrcFile, wsDstFile, false, pParams))
 		return S_FALSE;
 	return S_OK;
 }
 HRESULT CPdfFile::OnlineWordToPdfFromBinary(const std::wstring& wsSrcFile, const std::wstring& wsDstFile, CConvertFromBinParams* pParams)
 {
+	{ std::wofstream l("/tmp/svg-debug.log", std::ios::app); l << L"[SVG-DEBUG] CPdfFile::OnlineWordToPdfFromBinary src=" << wsSrcFile << L" dst=" << wsDstFile << std::endl; }
 	if (!m_pInternal->pWriter || !NSOnlineOfficeBinToPdf::ConvertBinToPdf(this, wsSrcFile, wsDstFile, true, pParams))
 		return S_FALSE;
 	return S_OK;
@@ -1337,6 +1342,7 @@ HRESULT CPdfFile::DrawImage(IGrObject* pImage, const double& dX, const double& d
 }
 HRESULT CPdfFile::DrawImageFromFile(const std::wstring& wsImagePath, const double& dX, const double& dY, const double& dW, const double& dH, const BYTE& nAlpha)
 {
+	{ std::wofstream l("/tmp/svg-debug.log", std::ios::app); l << L"[SVG-DEBUG] CPdfFile::DrawImageFromFile path=" << wsImagePath << L" pWriter=" << (void*)m_pInternal->pWriter << std::endl; }
 	if (!m_pInternal->pWriter)
 		return S_FALSE;
 	return m_pInternal->pWriter->DrawImageFromFile(m_pInternal->pAppFonts, m_pInternal->wsTempFolder, wsImagePath, dX, dY, dW, dH, nAlpha);
